@@ -1,9 +1,9 @@
 resource "aws_instance" "ubuntu" {
   ami           = var.aws_ami
-  count = var.instance_count
+  count         = var.instance_count
   instance_type = "t3.micro"
   key_name = "udacity"
-  subnet_id = var.public_subnet_ids[0]
+  subnet_id = var.public_subnet_ids[count.index % length(var.public_subnet_ids)]
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
 
   tags = {
@@ -15,23 +15,23 @@ resource "aws_security_group" "ec2_sg" {
   name        = "ec2_sg"
   vpc_id      = var.vpc_id
 
-  ingress {    
+  ingress {
     description = "web port"
-    from_port   = 80    
+    from_port   = 80
     to_port     = 80
-    protocol    = "tcp"    
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
     description = "ssh port"
-    from_port   = 22    
+    from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
     description = "monitoring"
-    from_port   = 9100    
+    from_port   = 9100
     to_port     = 9100
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
