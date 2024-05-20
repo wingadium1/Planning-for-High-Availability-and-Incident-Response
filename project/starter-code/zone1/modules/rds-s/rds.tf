@@ -1,4 +1,4 @@
-variable primary_db_cluster_arn {}
+variable "primary_db_cluster_arn" {}
 
 resource "aws_rds_cluster_parameter_group" "cluster_pg-s" {
   name   = "udacity-pg-s"
@@ -18,36 +18,41 @@ resource "aws_rds_cluster_parameter_group" "cluster_pg-s" {
 }
 
 resource "aws_db_subnet_group" "udacity_db_subnet_group" {
-  name       = "udacity_db_subnet_group"
+  name       = "udacity_db_subnet_group_s"
   subnet_ids = var.private_subnet_ids
 }
 
 resource "aws_rds_cluster" "udacity_cluster-s" {
-  cluster_identifier       = "udacity-db-cluster-s"
-  availability_zones       = ["us-west-1a"]
+  allow_major_version_upgrade     = true
+  apply_immediately               = true
+  cluster_identifier              = "udacity-db-cluster-s"
+  availability_zones              = ["us-west-1a", "us-west-1c"]
   db_cluster_parameter_group_name = aws_rds_cluster_parameter_group.cluster_pg-s.name
-  vpc_security_group_ids   = [aws_security_group.db_sg_2.id]
-  db_subnet_group_name     = aws_db_subnet_group.udacity_db_subnet_group.name
-  engine_mode              = "provisioned"
-  engine_version           = "5.7.mysql_aurora.2.12.2"
-  engine               = "aurora-mysql"
-  skip_final_snapshot      = true
-  storage_encrypted        = false
+  vpc_security_group_ids          = [aws_security_group.db_sg_2.id]
+  db_subnet_group_name            = aws_db_subnet_group.udacity_db_subnet_group.name
+  engine_mode                     = "provisioned"
+  engine                          = "aurora-mysql"
+  engine_version                  = "5.7.mysql_aurora.2.12.2"
+  skip_final_snapshot             = true
+  storage_encrypted               = false
+  backup_retention_period         = 5
+  replication_source_identifier   = var.primary_db_cluster_arn
+  source_region                   = "us-east-2"
   depends_on = [aws_rds_cluster_parameter_group.cluster_pg-s]
 }
 
 resource "aws_rds_cluster_instance" "udacity_instance-s" {
-  count                = 1
+  count                = var.rds_instance_count
   identifier           = "udacity-db-instance-${count.index}-s"
   cluster_identifier   = aws_rds_cluster.udacity_cluster-s.id
   instance_class       = "db.t2.small"
-  db_subnet_group_name = aws_db_subnet_group.udacity_db_subnet_group.name
   engine               = "aurora-mysql"
+  db_subnet_group_name = aws_db_subnet_group.udacity_db_subnet_group.name
 }
 
 resource "aws_security_group" "db_sg_2" {
   name   = "udacity-db-sg"
-  vpc_id =  var.vpc_id
+  vpc_id = var.vpc_id
 
   ingress {
     from_port   = 3306
